@@ -1,0 +1,189 @@
+/* 1080x1920 CSS px; the Cozyla renders it at DPR 2 (2160x3840). Proportions follow DAKboard:
+   photo 0–60%, agenda 60–89%, weather 89–100%. */
+:root { --w: 1080px; --h: 1920px; --photo-h: 60%; }
+:root { color-scheme: dark; }
+html, body { margin: 0; height: 100%; background: #000; color: #fff; overflow: hidden;
+  font-family: Roboto, system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; }
+/* Scaled to the window with `zoom`, not a transform: the Cozyla lays pages out at
+   720x1279 CSS px, and Android draws video in a hardware layer that ignores CSS
+   transforms (the camera showed up zoomed in). zoom re-lays out, which video follows. */
+main { width: var(--w); height: var(--h); position: relative; overflow: hidden; zoom: var(--fit, 1); }
+body { display: flex; justify-content: center; }
+
+/* Photos */
+.photos { position: absolute; inset: 0 0 auto 0; height: var(--photo-h); background: #000; overflow: hidden;
+  touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.photo { position: absolute; inset: 0; background: center / cover no-repeat; }
+/* Auto-advance crossfades; swipes slide (left = next comes in from the right). */
+.in-fade { animation: fade-in 2s ease both; }
+.out-fade { animation: fade-out 2s ease both; }
+.in-left { animation: from-right .45s cubic-bezier(.2,.8,.2,1) both; }
+.out-left { animation: to-left .45s cubic-bezier(.2,.8,.2,1) both; }
+.in-right { animation: from-left .45s cubic-bezier(.2,.8,.2,1) both; }
+.out-right { animation: to-right .45s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes fade-out { from { opacity: 1 } to { opacity: 0 } }
+@keyframes from-right { from { transform: translateX(100%) } to { transform: none } }
+@keyframes to-left { from { transform: none } to { transform: translateX(-100%) } }
+@keyframes from-left { from { transform: translateX(-100%) } to { transform: none } }
+@keyframes to-right { from { transform: none } to { transform: translateX(100%) } }
+.scrim { position: absolute; inset: 0 0 auto 0; height: 22%;
+  background: linear-gradient(to bottom, rgba(0,0,0,.55), rgba(0,0,0,0)); pointer-events: none; }
+
+/* Clock */
+.clock { position: absolute; top: 34px; left: 0; right: 0; text-align: center; text-shadow: 0 2px 18px rgba(0,0,0,.45);
+  pointer-events: none; /* swipes on the clock reach the photo underneath */ }
+.time { font-size: 150px; font-weight: 300; line-height: 1; letter-spacing: -2px; }
+.sec { font-size: 50px; vertical-align: 82px; margin-left: 6px; font-weight: 400; }
+.date { font-size: 40px; margin-top: 6px; }
+
+/* Info panel */
+.info { position: absolute; left: 0; right: 0; bottom: 0; top: var(--photo-h); display: flex; flex-direction: column; background: #000; }
+.loading { margin: auto; opacity: .5; font-size: 32px; }
+
+.agenda { flex: 1; display: grid; gap: 8px; padding: 10px 0 0; min-height: 0; }
+.day { display: flex; flex-direction: column; gap: 8px; min-width: 0; overflow: hidden; }
+.day-head { display: flex; align-items: baseline; gap: 12px; padding: 0 4px 2px; white-space: nowrap; }
+.day-head .num { font-size: 46px; font-weight: 300; line-height: 1; }
+.day-head .label { font-size: 25px; }
+.event { --c: #7986cb; border-left: 5px solid var(--c); border-radius: 3px; padding: 6px 10px 8px;
+  background: color-mix(in srgb, var(--c) 22%, #10131a); }
+.event .when { font-size: 22px; opacity: .75; }
+.event .title { font-size: 25px; line-height: 1.22; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.event .marker { vertical-align: -5px; margin-right: 8px; }
+/* Team logo at the start of the time line, so the title keeps its full width. */
+.event .logo { height: 30px; vertical-align: -8px; margin-right: 8px; }
+.event.compact .logo { height: 22px; vertical-align: -5px; margin-right: 6px; }
+.event.compact { padding: 4px 10px; border-left-width: 4px; }
+.event.compact .title { font-size: 20px; line-height: 1.25; -webkit-line-clamp: 2; opacity: .9; }
+.event.compact .marker { vertical-align: -4px; margin-right: 6px; }
+/* A day's events scroll when they overflow; the edge with more beyond it fades. */
+.day-events { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y;
+  display: flex; flex-direction: column; gap: 8px; padding-bottom: 12px; scrollbar-width: none;
+  --fade-top: 0px; --fade-bottom: 0px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--fade-top), #000 calc(100% - var(--fade-bottom)), transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 var(--fade-top), #000 calc(100% - var(--fade-bottom)), transparent); }
+.day-events::-webkit-scrollbar { display: none; }
+.day-events.fade-top { --fade-top: 50px; }
+.day-events.fade-bottom { --fade-bottom: 90px; }
+.day-events > * { flex-shrink: 0; }
+
+.weather { height: 211px; display: flex; align-items: center; padding: 0 0 0 4px; gap: 10px; }
+.now { width: 320px; display: flex; flex-direction: column; gap: 4px; }
+.temp-row { display: flex; align-items: center; gap: 18px; }
+.temp { font-size: 104px; font-weight: 300; line-height: 1; }
+.now-row { display: flex; align-items: center; gap: 12px; font-size: 28px; }
+.aqi { display: inline-flex; align-items: stretch; border-radius: 4px; overflow: hidden; font-size: 30px; }
+.aqi b { font-weight: 400; padding: 2px 10px; }
+.aqi i { font-style: normal; font-size: 15px; background: #333; padding: 4px 8px; display: flex; flex-direction: column; justify-content: center; line-height: 1.15; }
+.aqi small { opacity: .7; font-size: 13px; }
+.days { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; }
+.fday { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.dname { font-size: 32px; }
+.hl { font-size: 32px; display: flex; gap: 22px; }
+.hl .lo { opacity: .7; }
+
+/* Suggested alternative (?layout=fullbleed): the photo fills the whole screen and the
+   agenda and weather sit on a frosted panel over its lower part. */
+.layout-fullbleed { --photo-h: 100%; }
+.layout-fullbleed .info { top: 58%; background: linear-gradient(to bottom, rgba(0,0,0,.45), rgba(0,0,0,.82) 30%);
+  backdrop-filter: blur(24px) saturate(1.2); -webkit-backdrop-filter: blur(24px) saturate(1.2); padding: 0 12px; }
+.layout-fullbleed .event { background: color-mix(in srgb, var(--c) 30%, rgba(10,12,18,.55)); }
+
+/* Today's events: over, happening now, starting soon. */
+.event.past { opacity: .38; }
+.event.now { box-shadow: 0 0 0 2px var(--c) inset; background: color-mix(in srgb, var(--c) 38%, #10131a); }
+.event .tag { margin-left: 10px; font-size: 18px; font-weight: 600; letter-spacing: .02em; padding: 1px 8px 2px;
+  border-radius: 99px; background: var(--c); color: #fff; vertical-align: 2px; opacity: 1; }
+.event.soon .tag { background: rgba(255,255,255,.16); }
+.event .when:has(.tag) { opacity: 1; }
+
+/* When the photo was taken, bottom-left of the photo. */
+.taken { position: absolute; left: 22px; bottom: 16px; font-size: 22px; color: rgba(255,255,255,.88);
+  text-shadow: 0 1px 10px rgba(0,0,0,.7), 0 0 2px rgba(0,0,0,.6); pointer-events: none; animation: fade-in 1.2s ease both; }
+
+/* Tap feedback: a chevron on the tapped side that fades out. */
+.tap-hint { position: absolute; top: 50%; width: 96px; height: 96px; margin-top: -48px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 84px; line-height: 1; padding-bottom: 10px; box-sizing: border-box;
+  color: #fff; background: rgba(0,0,0,.35); pointer-events: none; animation: tap-hint .7s ease-out both; }
+.tap-hint.back { left: 28px; }
+.tap-hint.next { right: 28px; }
+@keyframes tap-hint { 0% { opacity: 0; transform: scale(.8) } 20% { opacity: 1; transform: scale(1) } 100% { opacity: 0 } }
+
+/* Cameras: grid of Low streams; tap one for full screen on Medium. */
+.cameras { position: absolute; inset: 0; background: #000; display: flex; flex-direction: column; z-index: 13; }
+.cam-bar { height: 96px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; font-size: 40px; }
+.cam-close { width: 72px; height: 72px; border-radius: 50%; border: 0; background: rgba(255,255,255,.14); color: #fff; font-size: 34px; }
+.cam-grid { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 1fr; gap: 6px; padding: 0 6px 6px; min-height: 0; }
+.cam-tile { position: relative; padding: 0; border: 0; background: #111; overflow: hidden; border-radius: 6px; }
+.cam-video, .cam-video frame-cam { position: absolute; inset: 0; display: block; }
+.cam-video video { width: 100% !important; height: 100% !important; object-fit: cover; background: #111; }
+.cam-name { position: absolute; left: 10px; bottom: 8px; font-size: 22px; color: #fff; text-shadow: 0 1px 6px rgba(0,0,0,.8); }
+.cam-name.big { left: 28px; bottom: 28px; font-size: 40px; }
+.cam-full { position: absolute; inset: 0; background: #000; z-index: 11; }
+.cam-full .cam-video video { object-fit: contain; }
+.cam-full .cam-close { position: absolute; top: 24px; right: 24px; }
+.cam-inset { position: absolute; right: 24px; bottom: 24px; width: 400px; height: 300px; border-radius: 10px; overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0,0,0,.6); border: 2px solid rgba(255,255,255,.3); }
+.cam-inset .cam-video video { object-fit: cover; }
+
+/* Live view: the default camera, plus outdoor cameras while they have motion.
+   The cameras are 16:9 on a portrait screen, so each is a full-width 16:9 strip
+   (up to three stacked, centred); from four on they go two to a row. */
+.live-wrap { position: absolute; inset: 0; z-index: 12; background: #000; animation: fade-in .4s ease both; }
+.live { position: absolute; inset: 0 0 var(--bar-h) 0; display: flex; flex-direction: column;
+  justify-content: center; gap: 8px; animation: fade-in .4s ease both; }
+.live-tile { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #111; animation: fade-in .4s ease both; }
+.live-tile .cam-video video { object-fit: contain; }
+.live.many { display: grid; grid-template-columns: 1fr 1fr; align-content: center; }
+.live.many .live-tile.main { grid-column: 1 / -1; }
+.live .cam-name { font-size: 30px; display: flex; align-items: center; gap: 10px; }
+.live.many .live-tile:not(.main) .cam-name { font-size: 24px; }
+.motion-dot { width: 14px; height: 14px; border-radius: 50%; background: #ff453a; box-shadow: 0 0 0 4px rgba(255,69,58,.3); animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .35 } }
+.live-close { position: absolute; top: 24px; right: 24px; z-index: 1; }
+
+/* Talk / Unlock / Garage bar along the bottom of the camera views. */
+:root { --bar-h: 210px; }
+.cam-full.with-bar .cam-full-video { position: absolute; inset: 0 0 var(--bar-h) 0; }
+.action-bar { position: absolute; left: 0; right: 0; bottom: 0; height: var(--bar-h); display: grid;
+  grid-template-columns: repeat(3, 1fr); gap: 18px; padding: 24px 28px 34px; box-sizing: border-box;
+  background: linear-gradient(to top, #000 70%, rgba(0,0,0,.6)); z-index: 2; }
+.action { position: relative; overflow: hidden; border: 0; border-radius: 28px; color: #fff; font: inherit; font-size: 34px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  background: rgba(255,255,255,.12); transition: background .2s, transform .1s; }
+.action:active { transform: scale(.97); }
+.action .aicon { font-size: 46px; line-height: 1; }
+.action.talk.on { background: #e5484d; }
+.action.unlock.done { background: #2f9e44; }
+.action:disabled { opacity: 1; }
+.action .level { position: absolute; left: 0; right: 0; bottom: 0; height: 10px; background: rgba(255,255,255,.85);
+  transform-origin: left; transition: transform .08s linear; }
+.action.garage.open { background: #9a5b00; }   /* door is open: amber, button closes it */
+.action-msg { position: absolute; left: 28px; bottom: calc(var(--bar-h) - 4px); font-size: 24px; color: #ff6369;
+  background: rgba(0,0,0,.7); padding: 8px 14px; border-radius: 12px; }
+
+/* Camera button, bottom-right of the photo (the photo date sits bottom-left). */
+.cam-button { position: absolute; right: 22px; top: calc(var(--photo-h) - 104px); width: 84px; height: 84px; border-radius: 50%;
+  border: 0; display: grid; place-items: center; color: #fff; background: rgba(0,0,0,.38);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); z-index: 3; }
+.cam-button:active { transform: scale(.94); }
+
+/* From the live view to the grid of all cameras. */
+.cam-all { position: absolute; top: 30px; left: 24px; z-index: 1; height: 60px; padding: 0 24px; border: 0; border-radius: 30px;
+  color: #fff; font: inherit; font-size: 26px; background: rgba(255,255,255,.14); }
+.action:disabled .aicon, .action:disabled span { opacity: .55; }
+
+/* After a ring the doorbell leads; its camera is portrait (3:4), so give it a square tile. */
+.live-tile.portrait { aspect-ratio: 1 / 1; }
+.live.many .live-tile.portrait { aspect-ratio: 4 / 3; }
+
+/* A soft fade from the bottom of the photo into the black calendar panel. */
+.photos::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 110px; pointer-events: none;
+  background: linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,.35) 55%, #000); }
+.layout-fullbleed .photos::after { display: none; }
+.taken { z-index: 1; }
+.action .hint { font-size: 20px; opacity: .85; margin-top: -2px; }
+
+/* Camera video never takes taps (no pause); the tile or view under it does. */
+.cam-video video { pointer-events: none; }

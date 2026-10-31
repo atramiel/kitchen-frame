@@ -1,0 +1,68 @@
+# Kitchen Frame config. Copy to ../config/config.yaml (next to this app folder)
+# and fill in your own values. Secrets live in ../secrets/*.env, never here.
+# frame-server reads this at startup: restart it after editing
+# (launchctl kickstart -k gui/$UID/com.frame.frame-server).
+server:
+  # HTTPS on the LAN with a private CA (scripts/make-cert.sh)
+  port: 443
+  dev_port: 8080        # FRAME_DEV_HTTP=1 previews on http://127.0.0.1:8080
+go2rtc:
+  url: http://127.0.0.1:1984
+cameras:
+  # Stream names are slugged Protect camera names (scripts/protect-streams.mjs).
+  # H.265 cameras: the page plays H.264 copies of these (<stream>_h264), since
+  # tablet browsers often play H.265 poorly. See server/transcode.ts.
+  h264_transcode: [doorbell_cam]
+  doorbell: doorbell_cam   # Talk, and its package camera (<doorbell>_package) as an inset
+  names: { doorbell_cam: Front Door }
+  order: [doorbell_cam, driveway]   # first in the grid; the rest alphabetical
+ha:
+  url: http://homeassistant.local:8123   # token: secrets/ha.env (HA_TOKEN)
+photos:
+  # The token is the part after "#" in an iCloud shared-album link.
+  source: { type: icloud_shared_album, token: YOUR_ALBUM_TOKEN }
+  interval_s: 7
+  size: { width: 2160, height: 2304 }   # top 60% of a 2160x3840 portrait screen
+calendars:
+  days: 4
+  sources:              # HA calendar entities; icon: flag | star | hockey
+    - { entity: calendar.family, color: "#7986cb" }
+    - { entity: calendar.us_holidays, color: "#e44141", icon: flag }
+  # Per-event overrides, matched on the title (first match wins). `logo` is an
+  # image you put in web/public/logos/ yourself (that folder isn't in git).
+  rules:
+    - { match: "Team Name", color: "#006d75", logo: /logos/team.png }
+weather: weather.home            # HA weather entity
+weather_station: KXXX            # optional: NWS station for today's measured high/low
+aqi: sensor.outdoor_pm2_5        # PM2.5 in µg/m³ (e.g. PurpleAir); converted to US AQI
+# Live camera view. It always shows `default`; a camera from `motion_cameras`
+# joins while it has motion and leaves `hold_s` after its motion stops. The frame
+# switches to this view on `open_on`, stays while any of these cameras sees someone,
+# and goes back to photos `close_after_s` after nobody is outside.
+live:
+  default: driveway
+  motion_cameras: [doorbell_cam, driveway]
+  hold_s: 5
+  # What opens the view. A rule's `close_after_s` is the least time it stays open;
+  # `chime` plays the doorbell sound. On a ring the doorbell leads the view.
+  open_on:
+    - { camera: driveway, kind: motion }
+    - { camera: doorbell_cam, kind: ring, close_after_s: 20, chime: true }
+  ring_entity: event.doorbell_cam_doorbell   # optional backup for rings, from HA
+  close_after_s: 10          # back to photos this long after nobody is outside
+  manual_close_after_s: 120  # camera button and "All cameras": closes this long after the last tap
+# Buttons on the camera views. Every use is logged in HA's logbook.
+actions:
+  unlock:
+    entities: [lock.front_door]   # what Unlock fires (locks or buttons)
+    lock: lock.front_door         # the lock whose state the button shows (and Lock uses)
+  garage:
+    cover: cover.garage_door      # opened/closed by the Garage button
+  talk_camera_id: PROTECT_CAMERA_ID   # the doorbell's Protect camera id (Talk)
+# The kitchen tablet: Fully Kiosk, controlled through HA. scripts/cozyla.mjs
+# switches it between the frame and the page it showed before.
+cozyla:
+  device_id: HA_DEVICE_ID
+  load_start_url: button.tablet_load_start_url
+  frame_url: https://192.168.1.10/
+  dakboard_url: https://example.com/previous-start-page

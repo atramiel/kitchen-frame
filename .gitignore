@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.env
+secrets/
+
+# Team logos and other images you supply yourself (often trademarked; not in git)
+web/public/logos/
