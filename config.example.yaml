@@ -53,9 +53,11 @@ live:
   manual_close_after_s: 120  # camera button and "All cameras": closes this long after the last tap
 # Buttons on the camera views. Every use is logged in HA's logbook.
 actions:
-  unlock:
-    entities: [lock.front_door]   # what Unlock fires (locks or buttons)
-    lock: lock.front_door         # the lock whose state the button shows (and Lock uses)
+  # One Unlock/Lock button per door. `unlock` (optional) lists what Unlock fires
+  # instead of the lock itself, e.g. a button entity for a door strike.
+  locks:
+    - { id: front, name: Front door, lock: lock.front_door }
+    - { id: side, name: Side door, lock: lock.side_door }
   garage:
     cover: cover.garage_door      # opened/closed by the Garage button
   talk_camera_id: PROTECT_CAMERA_ID   # the doorbell's Protect camera id (Talk)

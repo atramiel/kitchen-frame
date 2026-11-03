@@ -11,7 +11,7 @@ screen running Fully Kiosk), replacing DAKboard and a separate camera viewer:
   back to photos once nobody is outside. A camera button opens it by hand, and
   "All cameras" shows every camera.
 - **Talk, Unlock/Lock, Garage**: talk through the UniFi doorbell, lock or unlock
-  the front door, open or close the garage, all from the camera views.
+  the front and side doors, open or close the garage, all from the camera views.
 
 It runs on a Mac (mini) on the home network. Nothing is exposed to the internet.
 

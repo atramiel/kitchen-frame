@@ -267,7 +267,7 @@ async function act(action: string) {
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error ?? String(r.status));
 }
 
-type Doors = { lock: string; garage: string };
+type Doors = { locks: { id: string; name: string; state: string }[]; garage: string };
 
 function useDoors() {
   const [doors, setDoors] = useState<Doors>();
@@ -356,23 +356,33 @@ function ActionBar({ onTalk, onActivity }: { onTalk: (on: boolean) => void; onAc
   useEffect(() => { if (!msg) return; const t = setTimeout(() => setMsg(""), 6000); return () => clearTimeout(t); }, [msg]);
 
   // Pending ends when the state moves on from where it was, or after the wait.
-  const lock = doors?.lock, g = doors?.garage;
+  const g = doors?.garage;
+  const stateOf = (action: string) => action === "garage" ? g : doors?.locks.find((l) => l.id === action.split(":")[1])?.state;
   const isPending = (action: string, now: string | undefined) =>
     pending?.action === action && pending.from === now && Date.now() < pending.until;
   useEffect(() => {
     if (!pending) return;
-    const current = pending.action === "garage" ? g : lock;
-    if (current !== pending.from || Date.now() >= pending.until) setPending(undefined);
+    if (stateOf(pending.action) !== pending.from || Date.now() >= pending.until) setPending(undefined);
   });
 
-  // One button for the front door: Unlock when locked; when unlocked it turns
-  // green and a tap locks it again.
-  const unlocked = lock === "unlocked" || lock === "open";
-  const unlocking = lock === "unlocking" || isPending("unlock", lock);
-  const locking = lock === "locking" || isPending("lock", lock);
-  const lockLabel = locking ? "Locking…" : unlocking ? "Unlocking…" : lock === "jammed" ? "Lock jammed"
-    : unlocked ? "Unlocked" : "Unlock";
-  const lockAction = unlocked ? "lock" : "unlock";
+  // One button per door: Unlock when locked; when unlocked it turns green and a
+  // tap locks it again.
+  const lockButton = ({ id, name, state }: Doors["locks"][number]) => {
+    const unlocked = state === "unlocked" || state === "open";
+    const unlocking = state === "unlocking" || isPending(`unlock:${id}`, state);
+    const locking = state === "locking" || isPending(`lock:${id}`, state);
+    const label = locking ? "Locking…" : unlocking ? "Unlocking…" : state === "jammed" ? "Jammed"
+      : unlocked ? "Unlocked" : "Unlock";
+    const known = ["locked", "unlocked", "open", "locking", "unlocking", "jammed"].includes(state);
+    return (
+      <button key={id} class={`action unlock${unlocked && !locking ? " done" : ""}`}
+        onClick={() => run(`${unlocked ? "lock" : "unlock"}:${id}`, state, 15)} disabled={!known || unlocking || locking}>
+        <span class="aicon">{unlocked ? "🔓" : "🔒"}</span>
+        <span>{label}</span>
+        <small class="hint">{unlocked && !locking ? "Tap to lock" : name}</small>
+      </button>
+    );
+  };
 
   // The label follows the door's state: Open when closed, Close when open. Until
   // the door reports a known state, the button stays off.
@@ -390,12 +400,7 @@ function ActionBar({ onTalk, onActivity }: { onTalk: (on: boolean) => void; onAc
         <span>{talk.on ? "Stop" : "Talk"}</span>
         {talk.on && <i class="level" style={{ transform: `scaleX(${talk.level})` }} />}
       </button>
-      <button class={`action unlock${unlocked && !locking ? " done" : ""}`} onClick={() => run(lockAction, lock ?? "", 15)}
-        disabled={!lock || unlocking || locking}>
-        <span class="aicon">{unlocked ? "🔓" : "🔒"}</span>
-        <span>{lockLabel}</span>
-        {unlocked && !locking && <small class="hint">Tap to lock</small>}
-      </button>
+      {doors?.locks.map(lockButton)}
       <button class={`action garage ${g ?? ""}`} onClick={() => run("garage", g ?? "", 30)} disabled={!garageReady}>
         <span class="aicon">🚗</span>
         <span>{garageLabel}</span>
