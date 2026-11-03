@@ -46,7 +46,7 @@ live:
   # What opens the view. A rule's `close_after_s` is the least time it stays open;
   # `chime` plays the doorbell sound. On a ring the doorbell leads the view.
   open_on:
-    - { camera: driveway, kind: motion }
+    - { camera: driveway, kind: motion, entity: binary_sensor.driveway_motion }   # entity: optional HA backup
     - { camera: doorbell_cam, kind: ring, close_after_s: 20, chime: true }
   ring_entity: event.doorbell_cam_doorbell   # optional backup for rings, from HA
   close_after_s: 10          # back to photos this long after nobody is outside

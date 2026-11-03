@@ -62,7 +62,18 @@ export function createProtectFeed(root: string) {
       }
       feed.emit("activity", { camera, kind, active, type: ev.type, cameraActive: cameraBusy(camera) });
     });
-    ws.on("close", () => setTimeout(connect, 3000));
+    // Protect can stop sending without closing the connection (seen: 2+ hours of
+    // silence one morning). Ping it, and drop the connection if it stops answering.
+    let alive = true;
+    const heartbeat = setInterval(() => {
+      if (!alive) { console.error("protect feed: no answer to ping, reconnecting"); return ws.terminate(); }
+      alive = false;
+      ws.ping();
+    }, 20_000);
+    ws.on("pong", () => { alive = true; });
+    ws.on("message", () => { alive = true; });
+    ws.on("open", () => console.log("protect feed: connected"));
+    ws.on("close", (code) => { clearInterval(heartbeat); console.log(`protect feed: closed (${code}), reconnecting`); setTimeout(connect, 3000); });
     ws.on("error", (e) => console.error("protect feed:", e.message));
   }
 

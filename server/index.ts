@@ -18,6 +18,12 @@ import { createTranscodes } from "./transcode.js";
 import { WebSocketServer } from "ws";
 import { Agent } from "undici";
 
+// Timestamp every log line (launchd writes them straight to logs/frame-server.log).
+for (const level of ["log", "error"] as const) {
+  const orig = console[level].bind(console);
+  console[level] = (...args: unknown[]) => orig(new Date().toLocaleString("sv-SE"), ...args);
+}
+
 // Project root: server/dist/index.js → ../../..
 const FRAME = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const config = YAML.parse(readFileSync(join(FRAME, "config", "config.yaml"), "utf8"));
@@ -116,6 +122,26 @@ if (config.live.ring_entity) {
         const camera = config.live.open_on.find((o: { kind: string }) => o.kind === "ring")?.camera ?? config.cameras.doorbell;
         protect.inject({ camera, kind: "ring", active: true, type: "ha-ring" });
         setTimeout(() => protect.inject({ camera, kind: "ring", active: false, type: "ha-ring" }), 1000);
+      }
+      last = state;
+    } catch { /* HA briefly unreachable */ }
+  }, 1000);
+}
+
+// Backup for the rules that open the view: a rule's optional `entity` is HA's
+// sensor for the same thing (e.g. binary_sensor.driveway_motion), checked every
+// second. If the Protect feed misses an event, this still opens the view; when
+// both report it, the page just sees the view opened twice.
+for (const rule of config.live.open_on.filter((o: { entity?: string }) => o.entity)) {
+  let last: string | undefined;
+  const type = "ha-" + rule.kind;
+  setInterval(async () => {
+    try {
+      const { state } = await ha.state(rule.entity);
+      if (state === last || state === "unavailable" || state === "unknown") return;
+      if (last !== undefined && (state === "on" || last === "on")) {
+        if (state === "on") console.log(`${rule.kind} ${rule.camera} (from HA)`);
+        protect.inject({ camera: rule.camera, kind: rule.kind, active: state === "on", type });
       }
       last = state;
     } catch { /* HA briefly unreachable */ }
