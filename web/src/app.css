@@ -187,3 +187,7 @@ body { display: flex; justify-content: center; }
 
 /* Camera video never takes taps (no pause); the tile or view under it does. */
 .cam-video video { pointer-events: none; }
+
+/* Shown while the frame server can't be reached. */
+.offline { position: absolute; top: 24px; left: 50%; transform: translateX(-50%); z-index: 5; white-space: nowrap;
+  padding: 14px 28px; border-radius: 32px; font-size: 30px; color: #fff; background: rgba(200,40,45,.9); }

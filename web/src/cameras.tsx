@@ -167,13 +167,15 @@ export function useLive(cfg: LiveConfig | undefined) {
     busy: new Set<string>(),    // any camera this view cares about with an event in progress
     until: new Map<string, number>(), order: [] as string[], openUntil: 0, manual: false,
     lead: undefined as { camera: string; until: number } | undefined, // e.g. the doorbell after a ring
+    lostAt: 0,                  // when the event stream from the server dropped (0 = connected)
   });
   useEffect(() => {
     if (!cfg) return;
     const s = st.current;
     const es = new EventSource("/api/live");
     // On (re)connect the server replays what's in progress, so start from a clean slate.
-    es.onopen = () => { s.active.clear(); s.busy.clear(); tick((n) => n + 1); };
+    es.onopen = () => { s.active.clear(); s.busy.clear(); s.lostAt = 0; tick((n) => n + 1); };
+    es.onerror = () => { if (!s.lostAt) s.lostAt = Date.now(); }; // EventSource keeps retrying on its own
     es.onmessage = (m) => {
       const a: Activity = JSON.parse(m.data);
       const now = Date.now();
@@ -218,6 +220,8 @@ export function useLive(cfg: LiveConfig | undefined) {
     // The ringing doorbell leads (main, top tile); then the default camera; then cameras with motion.
     cameras: cfg ? [...new Set([...(lead ? [lead] : []), cfg.default, ...s.order])] : [],
     open: s.openUntil > now,
+    // No camera alerts can arrive: the server has been unreachable for a minute.
+    offline: s.lostAt > 0 && now - s.lostAt > 60_000,
     moving: new Set(s.active),
     close: () => { s.openUntil = 0; s.lead = undefined; tick((n) => n + 1); },
     // Camera button on the photo screen: stays up longer than a motion-opened view.

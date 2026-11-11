@@ -148,14 +148,38 @@ for (const rule of config.live.open_on.filter((o: { entity?: string }) => o.enti
   }, 1000);
 }
 
+// Watchdog: the tablet keeps /api/live open all the time. If no page has been
+// connected for 5 minutes (tablet off, or it can't reach this Mac, e.g. after the
+// Mac's address changed), raise a notification in HA; clear it when one is back.
+let liveClients = 0, lastClient = Date.now(), warned = false;
+const NOTE = "kitchen_frame_offline";
+setInterval(() => {
+  if (liveClients > 0) {
+    lastClient = Date.now();
+    if (warned) {
+      warned = false;
+      console.log("watchdog: tablet connected again");
+      ha.call("persistent_notification", "dismiss", { notification_id: NOTE }).catch(() => {});
+    }
+  } else if (!warned && Date.now() - lastClient > 5 * 60_000) {
+    warned = true;
+    console.error("watchdog: no tablet connected for 5 minutes");
+    ha.call("persistent_notification", "create", {
+      notification_id: NOTE, title: "Kitchen frame offline",
+      message: `The kitchen tablet hasn't connected to the frame server for 5 minutes, so camera alerts aren't showing. The tablet should load ${config.cozyla?.frame_url ?? "the frame"}; check that the Mac still has that address and the tablet is on.`,
+    }).catch((e) => console.error("watchdog:", e.message));
+  }
+}, 30_000);
+
 // Server-sent events: camera activity from Protect, for the live camera view.
 function live(req: IncomingMessage, res: ServerResponse) {
+  liveClients++;
   res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-store", connection: "keep-alive" });
   const send = (a: Activity) => res.write(`data: ${JSON.stringify(a)}\n\n`);
   protect.current().forEach(send);
   protect.on(send);
   const ping = setInterval(() => res.write(": ping\n\n"), 25_000);
-  req.on("close", () => { protect.off(send); clearInterval(ping); });
+  req.on("close", () => { liveClients--; lastClient = Date.now(); protect.off(send); clearInterval(ping); });
 }
 
 const actions = createActions(ha, config.actions);

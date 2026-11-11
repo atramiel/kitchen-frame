@@ -324,8 +324,13 @@ function App() {
   const [forceLive, setForceLive] = useState(params.get("view") === "live"); // ?view=live, for previews
   // The grid of all cameras: from "All cameras" in the live view (or ?view=cameras).
   const [cameras, setCameras] = useState(params.get("view") === "cameras");
+  // Say so when the server can't be reached, so a frame that can't get camera
+  // alerts doesn't look like it's working (the clock and the last photo stay up).
+  const [started] = useState(Date.now());
+  const offline = live.offline || (!config && Date.now() - started > 60_000);
   return (
     <main class={`ambient layout-${layout}`}>
+      {offline && <div class="offline">Can't reach the frame server. Camera alerts are off.</div>}
       {cameras && <Cameras onClose={() => setCameras(false)} idleS={config?.live.manual_close_after_s ?? 120} />}
       {(live.open || forceLive) && live.cameras.length > 0 &&
         <LiveView cameras={live.cameras} moving={live.moving} onClose={() => { live.close(); setForceLive(false); }}
