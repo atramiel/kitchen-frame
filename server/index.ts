@@ -151,7 +151,8 @@ for (const rule of config.live.open_on.filter((o: { entity?: string }) => o.enti
 // Watchdog: the tablet keeps /api/live open all the time. If no page has been
 // connected for 5 minutes (tablet off, or it can't reach this Mac, e.g. after the
 // Mac's address changed), raise a notification in HA; clear it when one is back.
-let liveClients = 0, lastClient = Date.now(), warned = false;
+// `warned` starts true so a warning left over from before a restart is cleared too.
+let liveClients = 0, lastClient = Date.now(), warned = true;
 const NOTE = "kitchen_frame_offline";
 setInterval(() => {
   if (liveClients > 0) {
