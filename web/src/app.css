@@ -192,8 +192,8 @@ body { display: flex; justify-content: center; }
 .offline { position: absolute; top: 24px; left: 50%; transform: translateX(-50%); z-index: 5; white-space: nowrap;
   padding: 14px 28px; border-radius: 32px; font-size: 30px; color: #fff; background: rgba(200,40,45,.9); }
 
-/* Appliance status: a dim row on the right, just above the weather. */
-.appliances { display: flex; justify-content: flex-end; gap: 30px; padding: 6px 14px 0; font-size: 22px; color: rgba(255,255,255,.42); }
+/* Appliance status: a dim row centered just above the weather. */
+.appliances { display: flex; justify-content: center; gap: 48px; padding: 6px 14px 0; font-size: 22px; color: rgba(255,255,255,.42); }
 .appliance { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
 .appliance small { font-size: 18px; opacity: .75; }
 .appliance.running { color: rgba(120,170,255,.75); }

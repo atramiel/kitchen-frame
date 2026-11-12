@@ -337,7 +337,7 @@ function left(ends: string, now: number) {
   return `${m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`} left`;
 }
 
-// Dishwasher, washer and dryer, small and dim above the weather. A running
+// Dishwasher, washer and dryer, small and dim, centered above the weather. A running
 // appliance is tinted blue; one that needs emptying or moving is tinted amber.
 function Appliances({ list }: { list: NonNullable<Ambient["appliances"]> }) {
   const now = useNow(30_000).getTime();
