@@ -67,12 +67,27 @@ const FULL_SIZE = { width: 2160, height: 3840 };
 
 // Everything Ambient mode shows, in one payload, cached for a minute.
 let ambientCache: { at: number; body: string } | undefined;
+// Appliance status (e.g. HA input_selects kept by automations): what each one
+// says right now and since when. The page shows the state as HA names it.
+type ApplianceConfig = { name: string; icon: string; entity: string; running?: string[]; attention?: string[]; hide?: string[] };
+async function appliancesNow() {
+  const list: ApplianceConfig[] = config.appliances ?? [];
+  return Promise.all(list.map(async (a) => {
+    const s = await ha.state(a.entity).catch(() => undefined);
+    const state = s?.state ?? "unavailable";
+    const tone = (a.running ?? ["Running"]).includes(state) ? "running"
+      : (a.attention ?? ["Clean", "Wet"]).includes(state) ? "attention" : "idle";
+    return { name: a.name, icon: a.icon, state, since: s?.since, tone, hidden: (a.hide ?? []).includes(state) || state === "unavailable" };
+  }));
+}
+
 async function ambient() {
-  if (ambientCache && Date.now() - ambientCache.at < 60_000) return ambientCache.body;
-  const [events, weather, pm] = await Promise.all([
+  if (ambientCache && Date.now() - ambientCache.at < 20_000) return ambientCache.body;
+  const [events, weather, pm, appliances] = await Promise.all([
     ha.events(config.calendars.sources, config.calendars.days),
     ha.weather(config.weather, config.weather_station),
     ha.state(config.aqi).catch(() => undefined),
+    appliancesNow(),
   ]);
   const pm25 = pm ? Number(pm.state) : NaN;
   // Title-based overrides (e.g. Sharks games in teal with the logo).
@@ -85,6 +100,7 @@ async function ambient() {
     events, weather,
     aqi: Number.isFinite(pm25) ? { aqi: pm25ToAqi(pm25), pm25 } : null,
     calendars: { days: config.calendars.days },
+    appliances,
   });
   ambientCache = { at: Date.now(), body };
   return body;

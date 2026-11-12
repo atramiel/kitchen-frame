@@ -132,7 +132,7 @@ export function createHa(root: string, haUrl: string) {
 
   async function state(entity: string) {
     const s = await get(`/api/states/${entity}`);
-    return { state: s.state as string, attributes: s.attributes };
+    return { state: s.state as string, attributes: s.attributes, since: s.last_changed as string };
   }
 
   async function call(domain: string, service: string, data: Record<string, unknown>) {

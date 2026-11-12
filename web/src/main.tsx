@@ -17,6 +17,7 @@ type Ambient = {
     daily: { date: string; condition: string; high: number; low: number | null }[] };
   aqi: { aqi: number; pm25: number } | null;
   calendars: { days: number };
+  appliances?: { name: string; icon: string; state: string; since?: string; tone: "running" | "attention" | "idle"; hidden: boolean }[];
 };
 
 const params = new URLSearchParams(location.search);
@@ -316,6 +317,41 @@ function Weather({ data }: { data: Ambient }) {
   );
 }
 
+// Small outline icons for the appliance row.
+const APPLIANCE_ICONS: Record<string, preact.JSX.Element> = {
+  dishwasher: <><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M4 8h16M8 5.5h1M11 5.5h1" /><path d="M9 14h6" /></>,
+  washer: <><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M4 7h16M7.5 5h1" /><circle cx="12" cy="14" r="4" /></>,
+  dryer: <><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M4 7h16M7.5 5h1" /><circle cx="12" cy="14" r="4" /><path d="M10.5 13.2c1-.8 2-.8 3 0" /></>,
+};
+
+// "5m", "3h", "2d": how long the status has held.
+function ago(since: string | undefined, now: number) {
+  if (!since) return "";
+  const m = Math.max(0, Math.floor((now - Date.parse(since)) / 60_000));
+  return m < 60 ? `${m}m` : m < 48 * 60 ? `${Math.floor(m / 60)}h` : `${Math.floor(m / 1440)}d`;
+}
+
+// Dishwasher, washer and dryer, small and dim above the weather. A running
+// appliance is tinted blue; one that needs emptying or moving is tinted amber.
+function Appliances({ list }: { list: NonNullable<Ambient["appliances"]> }) {
+  const now = useNow(30_000).getTime();
+  const shown = list.filter((a) => !a.hidden);
+  if (!shown.length) return null;
+  return (
+    <div class="appliances">
+      {shown.map((a) => (
+        <span class={`appliance ${a.tone}`} title={a.name}>
+          <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            {APPLIANCE_ICONS[a.icon] ?? APPLIANCE_ICONS.washer}
+          </svg>
+          <span>{a.state}</span>
+          <small>{ago(a.since, now)}</small>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function App() {
   const data = usePoll<Ambient>("/api/ambient", 60_000);
   const config = usePoll<{ photos: { interval_s: number }; live: LiveConfig; cameras?: CameraConfig }>("/api/config", 3_600_000);
@@ -345,7 +381,7 @@ function App() {
         </svg>
       </button>
       <section class="info">
-        {data ? <><Agenda data={data} /><Weather data={data} /></> : <div class="loading">Loading…</div>}
+        {data ? <><Agenda data={data} />{data.appliances && <Appliances list={data.appliances} />}<Weather data={data} /></> : <div class="loading">Loading…</div>}
       </section>
     </main>
   );
