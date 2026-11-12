@@ -17,7 +17,7 @@ type Ambient = {
     daily: { date: string; condition: string; high: number; low: number | null }[] };
   aqi: { aqi: number; pm25: number } | null;
   calendars: { days: number };
-  appliances?: { name: string; icon: string; state: string; since?: string; tone: "running" | "attention" | "idle"; hidden: boolean }[];
+  appliances?: { name: string; icon: string; state: string; since?: string; ends?: string; tone: "running" | "attention" | "idle"; hidden: boolean }[];
 };
 
 const params = new URLSearchParams(location.search);
@@ -331,6 +331,12 @@ function ago(since: string | undefined, now: number) {
   return m < 60 ? `${m}m` : m < 48 * 60 ? `${Math.floor(m / 60)}h` : `${Math.floor(m / 1440)}d`;
 }
 
+// Time left in a cycle: "42m left", "1h 05m left".
+function left(ends: string, now: number) {
+  const m = Math.max(0, Math.ceil((Date.parse(ends) - now) / 60_000));
+  return `${m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`} left`;
+}
+
 // Dishwasher, washer and dryer, small and dim above the weather. A running
 // appliance is tinted blue; one that needs emptying or moving is tinted amber.
 function Appliances({ list }: { list: NonNullable<Ambient["appliances"]> }) {
@@ -345,7 +351,7 @@ function Appliances({ list }: { list: NonNullable<Ambient["appliances"]> }) {
             {APPLIANCE_ICONS[a.icon] ?? APPLIANCE_ICONS.washer}
           </svg>
           <span>{a.state}</span>
-          <small>{ago(a.since, now)}</small>
+          <small>{a.ends && Date.parse(a.ends) > now ? left(a.ends, now) : ago(a.since, now)}</small>
         </span>
       ))}
     </div>

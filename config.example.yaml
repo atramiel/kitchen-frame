@@ -38,11 +38,12 @@ aqi: sensor.outdoor_pm2_5        # PM2.5 in µg/m³ (e.g. PurpleAir); converted 
 # Appliance status: a small dim row above the weather showing each one's state
 # (exactly as the entity names it) and how long it has been that way. `running`
 # states are tinted blue, `attention` states amber (defaults: Running; Clean, Wet).
-# `hide` lists states not worth showing.
+# `hide` lists states not worth showing. `ends` is a sensor with the cycle's finish
+# time; while it's running the row shows the time left.
 appliances:
   - { name: Dishwasher, icon: dishwasher, entity: input_select.dishwasher_status }
-  - { name: Washer, icon: washer, entity: input_select.washer_status }
-  - { name: Dryer, icon: dryer, entity: input_select.dryer_status }
+  - { name: Washer, icon: washer, entity: input_select.washer_status, ends: sensor.front_load_washer_remaining_time }
+  - { name: Dryer, icon: dryer, entity: input_select.dryer_status, ends: sensor.dryer_remaining_time }
 # Live camera view. It always shows `default`; a camera from `motion_cameras`
 # joins while it has motion and leaves `hold_s` after its motion stops. The frame
 # switches to this view on `open_on`, stays while any of these cameras sees someone,
