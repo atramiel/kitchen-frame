@@ -70,8 +70,9 @@ let ambientCache: { at: number; body: string } | undefined;
 // Appliance status (e.g. HA input_selects kept by automations): what each one
 // says right now and since when. The page shows the state as HA names it.
 // `ends` (optional) is a timestamp sensor for when the running cycle finishes
-// (e.g. LG ThinQ's "remaining time"); while it's in the future, the page shows
-// the time left instead of how long the status has held.
+// (e.g. LG ThinQ's "remaining time", Home Connect's "program finish time"); while
+// the status is a running one and that time is in the future, the page shows the
+// time left instead of how long the status has held.
 type ApplianceConfig = { name: string; icon: string; entity: string; ends?: string; running?: string[]; attention?: string[]; hide?: string[] };
 async function appliancesNow() {
   const list: ApplianceConfig[] = config.appliances ?? [];
@@ -85,7 +86,7 @@ async function appliancesNow() {
     const tone = (a.running ?? ["Running"]).includes(state) ? "running"
       : (a.attention ?? ["Clean", "Wet"]).includes(state) ? "attention" : "idle";
     return { name: a.name, icon: a.icon, state, since: s?.since, tone,
-      ends: Number.isFinite(endsAt) && endsAt > Date.now() ? new Date(endsAt).toISOString() : undefined, hidden: (a.hide ?? []).includes(state) || state === "unavailable" };
+      ends: tone === "running" && Number.isFinite(endsAt) && endsAt > Date.now() ? new Date(endsAt).toISOString() : undefined, hidden: (a.hide ?? []).includes(state) || state === "unavailable" };
   }));
 }
 
