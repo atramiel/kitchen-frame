@@ -134,6 +134,18 @@ protect.on((a) => {
   }
 });
 
+// Calendars from links (HA's Remote Calendar) are only re-downloaded about once a
+// day, so ask HA to refresh them every `calendars.refresh_min` minutes (default 15;
+// 0 turns it off). Not in dev previews: the real frame-server already does it.
+const refreshMin = config.calendars.refresh_min ?? 15;
+if (!process.env.FRAME_DEV_HTTP && refreshMin > 0) {
+  const refresh = () => ha.call("homeassistant", "update_entity", {
+    entity_id: config.calendars.sources.map((c: { entity: string }) => c.entity),
+  }).then(() => { ambientCache = undefined; }, (e) => console.error("calendar refresh:", (e as Error).message));
+  refresh();
+  setInterval(refresh, refreshMin * 60_000);
+}
+
 // Backup for doorbell rings: HA's doorbell event entity changes state (to the
 // ring's timestamp) on every press. Checked every second; the page ignores a
 // second ring report within a few seconds of the first.

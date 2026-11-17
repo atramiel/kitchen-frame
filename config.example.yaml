@@ -25,6 +25,7 @@ photos:
   size: { width: 2160, height: 2304 }   # top 60% of a 2160x3840 portrait screen
 calendars:
   days: 4
+  refresh_min: 15      # how often HA re-downloads calendars added from a link (0 = HA's own daily refresh)
   sources:              # HA calendar entities; icon: flag | star | hockey
     - { entity: calendar.family, color: "#7986cb" }
     - { entity: calendar.us_holidays, color: "#e44141", icon: flag }
